@@ -84,7 +84,13 @@ async def run_pipeline_with_config(
     is_resume_run: bool = False,
     **_kwargs: dict,
 ) -> AsyncIterable[PipelineRunResult]:
-    """Run a pipeline with the given config.
+    """
+    Run a pipeline with the given config.
+    Run a pipeline with the given configuration and optional overrides.
+    This function iterates through the configured workflows, executing each in order.
+
+    This function is the core executor of the GraphRAG pipeline, handling the setup,
+    execution, and output of the configured workflows.
 
     Args:
         - config_or_path - The config to run the pipeline with
@@ -99,15 +105,39 @@ async def run_pipeline_with_config(
         - emit - The table emitters to use for the pipeline.
         - memory_profile - Whether or not to profile the memory.
         - run_id - The run id to start or resume from.
+
+    Yields:
+    -------
+    AsyncIterable[PipelineRunResult]
+        Results from each workflow as they complete, including any errors.
+
+    Notes:
+    ------
+    - This function handles the entire pipeline execution process, including:
+      * Configuration loading and validation
+      * Dataset preparation and post-processing
+      * Workflow execution and error handling
+      * Progress reporting and callback management
+      * Output emission in specified formats
+    - It's designed to be flexible, allowing various components to be overridden or customized.
+    - The function yields results asynchronously as each workflow completes.
+    - Error handling is built-in, with errors captured and yielded along with results.
     """
+
+    # check if the config is a file path (string) to a config file (JSON or YAML)
     if isinstance(config_or_path, str):
         log.info("Running pipeline with config %s", config_or_path)
     else:
         log.info("Running pipeline")
 
     run_id = run_id or time.strftime("%Y%m%d-%H%M%S")
+
+    # load the pipeline configuration
     config = load_pipeline_config(config_or_path)
+
+    # ${timestamp} is replaced with the run_id, creating unique directories for each run
     config = _apply_substitutions(config, run_id)
+
     root_dir = config.root_dir
 
     def _create_storage(config: PipelineStorageConfigTypes | None) -> PipelineStorage:
@@ -183,7 +213,8 @@ async def run_pipeline(
     is_resume_run: bool = False,
     **_kwargs: dict,
 ) -> AsyncIterable[PipelineRunResult]:
-    """Run the pipeline.
+    """
+    Run the pipeline.
 
     Args:
         - workflows - The workflows to run
@@ -204,11 +235,14 @@ async def run_pipeline(
     """
     start_time = time.time()
     stats = PipelineRunStats()
+
     storage = storage or MemoryPipelineStorage()
     cache = cache or InMemoryCache()
     progress_reporter = progress_reporter or NullProgressReporter()
     callbacks = callbacks or ConsoleWorkflowCallbacks()
     callbacks = _create_callback_chain(callbacks, progress_reporter)
+
+    # EMITTERS
     emit = emit or [TableEmitterType.Parquet]
     emitters = create_table_emitters(
         emit,
@@ -217,6 +251,8 @@ async def run_pipeline(
             "Error emitting table", e, s, d
         ),
     )
+
+    # WORKFLOWS
     loaded_workflows = load_workflows(
         workflows,
         additional_verbs=additional_verbs,
@@ -418,6 +454,26 @@ def _validate_dataset(dataset: pd.DataFrame):
 
 
 def _apply_substitutions(config: PipelineConfig, run_id: str) -> PipelineConfig:
+    """
+    Apply string substitutions to certain fields in the pipeline configuration.
+
+    This function processes the PipelineConfig object, replacing placeholders
+    in specific fields with actual values, primarily using the run_id.
+
+    Notes:
+    ------
+    - Currently applies substitutions to the following fields if they exist:
+      * storage.base_dir
+      * cache.base_dir
+      * reporting.base_dir
+    - Uses Python's string.Template for substitutions.
+    - The main substitution is:
+      * ${timestamp} is replaced with the run_id
+    - This function is useful for creating unique directories for each run,
+      helping to organize outputs and avoid conflicts between different runs.
+    - The function creates a new PipelineConfig object rather than modifying
+      the existing one, maintaining immutability.
+    """
     substitutions = {"timestamp": run_id}
 
     if (
@@ -429,6 +485,7 @@ def _apply_substitutions(config: PipelineConfig, run_id: str) -> PipelineConfig:
         config.storage.base_dir = Template(config.storage.base_dir).substitute(
             substitutions
         )
+
     if (
         isinstance(config.cache, PipelineFileCacheConfig | PipelineBlobCacheConfig)
         and config.cache.base_dir

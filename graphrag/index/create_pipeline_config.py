@@ -108,7 +108,83 @@ builtin_document_attributes: set[str] = {
 
 
 def create_pipeline_config(settings: GraphRagConfig, verbose=False) -> PipelineConfig:
-    """Get the default config for the pipeline."""
+    """
+    Get the default config for the pipeline.
+
+    kiku:
+    Create a comprehensive pipeline configuration based on provided settings.
+    Importantly, the execution workflows sequence is created here.
+
+    This function generates a complete PipelineConfig object by processing the
+    input GraphRagConfig settings. It sets up various components of the pipeline
+    including input, reporting, storage, cache, and individual workflow configurations.
+
+    Parameters:
+    -----------
+    settings : GraphRagConfig
+        The input configuration settings, typically loaded from a file or environment.
+    verbose : bool, optional
+        If True, enables verbose logging of configuration details (default: False).
+
+    Returns:
+    --------
+    PipelineConfig
+        A fully populated PipelineConfig object ready for use in the pipeline.
+
+    Notes:
+    ------
+    - Configures various aspects of the pipeline including:
+      * Input data sources and formats
+      * Reporting mechanisms
+      * Storage solutions
+      * Caching strategies
+      * Text embedding settings
+      * Entity extraction and summarization
+      * Graph creation and manipulation
+      * Community detection and reporting
+    - Handles the inclusion or exclusion of specific workflows based on settings
+    - Sets up embedding configurations for different data types (entities, relationships, documents, etc.)
+    - Considers settings for covariate extraction if enabled
+    - Applies any specified workflow skipping
+    - Workflow sequence:
+        * Document workflows
+            - create_base_documents
+            - create_final_documents
+        * Text unit workflows
+            - create_base_text_units
+            - join_text_units_to_entity_ids
+            - join_text_units_to_relationship_ids
+            - join_text_units_to_covariate_ids (if enabled)
+            - create_final_text_units
+        * Graph workflows
+            - create_base_extracted_entities
+            - create_summarized_entities
+            - create_base_entity_graph
+            - create_final_entities
+            - create_final_relationships
+            - create_final_nodes
+        * Community workflows
+            - create_final_communities
+            - create_final_community_reports
+        * Covariate workflows (if enabled)
+            - create_final_covariates
+    This order is designed to build up the data progressively:
+    - First, it processes documents and creates text units.
+    - Then it extracts entities and builds the entity graph.
+    - After that, it creates final versions of entities, relationships, and nodes.
+    - Finally, it generates community structures and reports.
+
+    It's important to note that this order can be modified by: (in workflows/load.py::load_workflows)
+    - The skip_workflows setting in the configuration, which can exclude certain workflows.
+    - Dependencies between workflows, which are handled by the topological_sort
+        function to ensure that workflows run after their dependencies.
+
+    Raises:
+    -------
+    ValueError
+        If essential configuration elements are missing or invalid.
+    """
+
     # relative to the root_dir
     if verbose:
         _log_llm_settings(settings)
@@ -259,9 +335,9 @@ def _get_embedding_settings(settings: TextEmbeddingConfig, embedding_name: str) 
     # settings.vector_store.<vector_name> contains the specific settings for this embedding
     #
     strategy = settings.resolved_strategy()  # get the default strategy
-    strategy.update({
-        "vector_store": vector_store_settings
-    })  # update the default strategy with the vector store settings
+    strategy.update(
+        {"vector_store": vector_store_settings}
+    )  # update the default strategy with the vector store settings
     # This ensures the vector store config is part of the strategy and not the global config
     return {
         "strategy": strategy,

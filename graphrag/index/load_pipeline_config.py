@@ -1,7 +1,10 @@
 # Copyright (c) 2024 Microsoft Corporation.
 # Licensed under the MIT License
 
-"""A module containing read_dotenv, load_pipeline_config, _parse_yaml and _create_include_constructor methods definition."""
+"""
+A module containing read_dotenv, load_pipeline_config, _parse_yaml and 
+_create_include_constructor methods definition.
+"""
 
 import json
 from pathlib import Path
@@ -16,7 +19,13 @@ from .create_pipeline_config import create_pipeline_config
 
 
 def load_pipeline_config(config_or_path: str | PipelineConfig) -> PipelineConfig:
-    """Load a pipeline config from a file path or a config object."""
+    """
+    Load a pipeline config from a file path or a config object.
+    Load and process a pipeline configuration from a file or existing config object.
+
+    This function handles the loading and parsing of pipeline configurations, supporting
+    various input formats and inheritance mechanisms.
+    """
     if isinstance(config_or_path, PipelineConfig):
         config = config_or_path
     elif config_or_path == "default":

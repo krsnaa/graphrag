@@ -1,7 +1,42 @@
 # Copyright (c) 2024 Microsoft Corporation.
 # Licensed under the MIT License
 
-"""A package containing default workflows definitions."""
+"""
+A package containing default workflows definitions.
+
+Each workflow function (like build_create_base_documents_steps) returns a list of steps. 
+These steps are individual operations (often called "verbs" in data processing pipelines) 
+that are executed in order. (create_pipeline_config.py)
+
+Default workflow execution sequence:
+* Document workflows
+    - create_base_documents
+    - create_final_documents
+* Text unit workflows
+    - create_base_text_units
+    - join_text_units_to_entity_ids
+    - join_text_units_to_relationship_ids
+    - join_text_units_to_covariate_ids (if enabled)
+    - create_final_text_units
+* Graph workflows
+    - create_base_extracted_entities
+    - create_summarized_entities
+    - create_base_entity_graph
+    - create_final_entities
+    - create_final_relationships
+    - create_final_nodes
+* Community workflows
+    - create_final_communities
+    - create_final_community_reports
+* Covariate workflows (if enabled)
+    - create_final_covariates
+
+This order is designed to build up the data progressively:
+- First, it processes documents and creates text units.
+- Then it extracts entities and builds the entity graph.
+- After that, it creates final versions of entities, relationships, and nodes.
+- Finally, it generates community structures and reports.
+"""
 
 from .typing import WorkflowDefinitions
 from .v1.create_base_documents import (

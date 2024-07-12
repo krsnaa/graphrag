@@ -50,7 +50,14 @@ def load_workflows(
     additional_workflows: WorkflowDefinitions | None = None,
     memory_profile: bool = False,
 ) -> LoadWorkflowResult:
-    """Load the given workflows.
+    """
+    Load the given workflows.
+
+    Load and prepare workflows for execution in the pipeline.
+
+    This function processes a list of workflow references, resolves their dependencies,
+    and prepares them for execution. It can also incorporate additional custom verbs
+    and workflows.
 
     Args:
         - workflows_to_load - The workflows to load
@@ -59,16 +66,29 @@ def load_workflows(
     Returns:
         - output[0] - The loaded workflow names in the order they should be run
         - output[1] - A dictionary of workflow name to workflow dependencies
+
+    Notes:
+    ------
+    - This function handles both named and anonymous workflows.
+    - It resolves dependencies between workflows, ensuring they are executed in the correct order.
+    - If a workflow depends on another that isn't explicitly included, it will be automatically added.
+    - The function uses topological sorting to determine the final execution order.
+    - Memory profiling can be enabled for performance analysis.
     """
+    # Initialize the workflow graph - a dictionary of workflow names to WorkflowToRun objects
     workflow_graph: dict[str, WorkflowToRun] = {}
 
     global anonymous_workflow_count
+
     for reference in workflows_to_load:
         name = reference.name
         is_anonymous = name is None or name.strip() == ""
         if is_anonymous:
             name = f"Anonymous Workflow {anonymous_workflow_count}"
             anonymous_workflow_count += 1
+
+        # Python's type hinting system - It tells type checking tools that
+        # name should be treated as a string from this point forward in the code.
         name = cast(str, name)
 
         config = reference.config
@@ -81,16 +101,21 @@ def load_workflows(
         )
         workflow_graph[name] = WorkflowToRun(workflow, config=config or {})
 
-    # Backfill any missing workflows
+    # Backfill any missing workflows (dependencies) into the workflow graph
     for name in list(workflow_graph.keys()):
         workflow = workflow_graph[name]
+
+        # create a new list of workflow.workflow.dependencies and remove the "workflow:" prefix
         deps = [
             d.replace("workflow:", "")
             for d in workflow.workflow.dependencies
             if d.startswith("workflow:")
         ]
+
+        # Add any non- explicitly included workflows that are a dependency to existing workflows
         for dependency in deps:
             if dependency not in workflow_graph:
+                #  create a new dictionary that's a combination of the dependency and the workflow.config
                 reference = {"name": dependency, **workflow.config}
                 workflow_graph[dependency] = WorkflowToRun(
                     workflow=create_workflow(
@@ -105,16 +130,30 @@ def load_workflows(
 
     # Run workflows in order of dependencies
     def filter_wf_dependencies(name: str) -> list[str]:
+        # list comprehension - create a list of external dependencies for a given workflow
         externals = [
             e.replace("workflow:", "")
             for e in workflow_graph[name].workflow.dependencies
         ]
         return [e for e in externals if e in workflow_graph]
 
+    """ 
+    {
+        'workflow1': ['dep1', 'dep2'],
+        'workflow2': ['dep3'],
+        'workflow3': ['dep1', 'dep4'],
+        # ... and so on for all workflows in workflow_graph
+    }
+    """
+    # dictionary comprehension - get a list of valid workflow dependencies for a given workflow
     task_graph = {name: filter_wf_dependencies(name) for name in workflow_graph}
+
+    # sort the workflows in the order they should be run, based on their dependencies
     workflow_run_order = topological_sort(task_graph)
+
     workflows = [workflow_graph[name] for name in workflow_run_order]
     log.info("Workflow Run Order: %s", workflow_run_order)
+
     return LoadWorkflowResult(workflows=workflows, dependencies=task_graph)
 
 

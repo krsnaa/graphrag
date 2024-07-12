@@ -1,13 +1,37 @@
 # Copyright (c) 2024 Microsoft Corporation.
 # Licensed under the MIT License
 
+""" 
+kiku:
+Based on the pyproject.toml file, when you run poetry run poe index <...args>, 
+the following happens:
+    index = "python -m graphrag.index" (The command is defined in the [tool.poe.tasks] section )
+
+This command tells Poetry to run the Python module graphrag.index with any additional arguments passed.
+In the Python package structure, this typically corresponds to running the __main__.py file 
+inside the graphrag/index/ directory. (this file...)
+
+So, the execution flow is:
+- poetry run poe index <...args>
+- Poetry executes python -m graphrag.index <...args>
+- This runs the __main__.py in the graphrag/index/ directory
+- The __main__.py file parses arguments and calls index_cli from cli.py
+- The index_cli function in cli.py handles the indexing process based on the provided arguments
+"""
+
 """The Indexing Engine package root."""
 
 import argparse
 
 from .cli import index_cli
 
+# parse command-line arguments and then call the index_cli function from cli.py
 if __name__ == "__main__":
+    # Argparse handles parsing these arguments, converting them to the correct types,
+    # and making them easily accessible in your code
+    # Using argparse is generally preferred over simple input() calls for command-line programs
+    # because it provides a more robust and user-friendly interface, especially for programs
+    # with multiple options or complex argument structures
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--config",
@@ -68,6 +92,8 @@ if __name__ == "__main__":
         help="Overlay default configuration values on a provided configuration file (--config).",
         action="store_true",
     )
+
+    # Namespace(config=None, verbose=False, memprofile=False, root='.', resume=None, reporter=None, emit=None, dryrun=False, nocache=False, init=False, overlay_defaults=False)
     args = parser.parse_args()
 
     if args.overlay_defaults and not args.config:

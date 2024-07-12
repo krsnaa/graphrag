@@ -1,0 +1,48 @@
+{
+  "byFolder": {
+    "config": 3419,
+    "index": 20063,
+    "llm": 2843,
+    "model": 947,
+    "prompt_tune": 1461,
+    "query": 5518,
+    "vector_stores": 633
+  },
+
+  "byExt": {
+    "py": 27858,
+    "pyc": 7024,
+    "typed": 2
+  },
+
+  "byFolderByExt": {
+    "config": {
+      "py": 2576,
+      "pyc": 843
+    },
+    "index": {
+      "py": 15184,
+      "pyc": 4877,
+      "typed": 2
+    },
+    "llm": {
+      "py": 2119,
+      "pyc": 724
+    },
+    "model": {
+      "py": 559,
+      "pyc": 388
+    },
+    "prompt_tune": {
+      "py": 1461
+    },
+    "query": {
+      "py": 5495,
+      "pyc": 23
+    },
+    "vector_stores": {
+      "py": 464,
+      "pyc": 169
+    }
+  }
+}

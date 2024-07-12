@@ -82,13 +82,77 @@ def index_cli(
     overlay_defaults: bool,
     cli: bool = False,
 ):
-    """Run the pipeline with the given config."""
+    """
+    Run the pipeline with the given config.
+    kiku:
+    Execute the main indexing pipeline with the specified configuration and options.
+
+    This function serves as the entry point for the indexing CLI, setting up the
+    environment, loading configurations, and running the indexing process.
+
+    Parameters:
+    -----------
+    root : str
+        The root directory for input data and output data.
+    init : bool
+        If True, initialize a new project in the specified root directory.
+    verbose : bool
+        If True, enable verbose logging.
+    resume : str | None
+        If provided, resume a previous data run using the specified run ID.
+    memprofile : bool
+        If True, enable memory profiling during execution.
+    nocache : bool
+        If True, disable the LLM cache.
+    reporter : str | None
+        The type of progress reporter to use. Options: 'rich', 'print', or 'none'.
+    config : str | None
+        Path to a custom configuration file to use.
+    emit : str | None
+        Comma-separated list of data formats to emit (e.g., 'parquet,csv').
+    dryrun : bool
+        If True, perform a dry run without executing any steps, useful for config inspection.
+    overlay_defaults : bool
+        If True, overlay default configuration values on the provided config file.
+    cli : bool, optional
+        If True, indicate that the function is being run from the CLI (default: False).
+
+    Returns:
+    --------
+    None
+
+    Raises:
+    -------
+    ValueError
+        If invalid configuration options are provided.
+
+    Notes:
+    ------
+    - This function sets up logging, creates a progress reporter, and handles project
+      initialization if needed.
+    - It loads and processes the configuration, then executes the indexing pipeline.
+    - The function can handle both new runs and resuming previous runs.
+    - Various options allow for customization of the indexing process, including
+      output formats, caching, and reporting.
+    """
+
+    # 20240705-030018
     run_id = resume or time.strftime("%Y%m%d-%H%M%S")
     _enable_logging(root, run_id, verbose)
     progress_reporter = _get_progress_reporter(reporter)
+
+    # This will only create two files: .env and settings.yaml
+    # in the --root directory and terminate the program
     if init:
         _initialize_project_at(root, progress_reporter)
         sys.exit(0)
+
+    # If overlay_defaults is True, the default configuration values
+    # will be overlaid on the provided configuration file
+    # otherwise, the provided configuration values will be used
+
+    # in either case, we get back a fully populated PipelineConfig object
+    # ready for use in the pipeline.
     if overlay_defaults:
         pipeline_config: str | PipelineConfig = _create_default_config(
             root, config, verbose, dryrun or False, progress_reporter
@@ -97,13 +161,43 @@ def index_cli(
         pipeline_config: str | PipelineConfig = config or _create_default_config(
             root, None, verbose, dryrun or False, progress_reporter
         )
+
     cache = NoopPipelineCache() if nocache else None
     pipeline_emit = emit.split(",") if emit else None
     encountered_errors = False
 
     def _run_workflow_async() -> None:
+        """
+        Execute the pipeline workflow asynchronously.
+
+        This function sets up and runs the main pipeline workflow in an asynchronous manner.
+        It handles signal interrupts, manages the event loop, and executes the pipeline
+        using the configured settings.
+
+        Key Features:
+        - Sets up signal handlers for graceful termination (SIGINT, SIGHUP)
+        - Configures and uses the appropriate event loop based on the operating system
+        - Executes the pipeline workflow using run_pipeline_with_config
+        - Handles progress reporting and error logging during execution
+
+        Global Effects:
+        - Modifies the global 'encountered_errors' flag based on workflow execution results
+
+        Notes:
+        - Uses uvloop on non-Windows systems for improved performance
+        - Falls back to asyncio's default loop on Windows systems
+        - Utilizes nest_asyncio on Windows for compatibility in certain environments
+
+        Raises:
+        - May raise various exceptions related to pipeline execution, which are caught
+          and logged by the error handling mechanism
+
+        This function is typically called within the main execution flow of the indexing process
+        and shouldn't be called directly under normal circumstances.
+        """
         import signal
 
+        # graceful termination signal handler
         def handle_signal(signum, _):
             # Handle the signal here
             progress_reporter.info(f"Received signal {signum}, exiting...")
@@ -119,13 +213,53 @@ def index_cli(
             signal.signal(signal.SIGHUP, handle_signal)
 
         async def execute():
+            """
+            Asynchronously execute the pipeline workflows.
+
+            This function is the core of the asynchronous pipeline execution. It iterates
+            through all configured workflows, running each one and handling their outputs
+            and potential errors.
+
+            Global Effects:
+            - Modifies the global 'encountered_errors' flag if any errors occur during execution.
+
+            Workflow Execution:
+            - Iterates through workflows defined in the pipeline configuration.
+            - Runs each workflow using run_pipeline_with_config.
+            - Captures and processes the output of each workflow.
+
+            Error Handling:
+            - Logs errors encountered during workflow execution.
+            - Sets the global 'encountered_errors' flag if any errors occur.
+
+            Progress Reporting:
+            - Uses the configured progress reporter to update on workflow status.
+            - Reports successful completion or error for each workflow.
+
+            Notes:
+            - This function is designed to be run within an asynchronous context.
+            - It's typically called by _run_workflow_async and shouldn't be invoked directly.
+
+            Returns:
+            -------
+            None
+
+            Raises:
+            ------
+            No exceptions are raised directly by this function, as all errors are caught
+            and handled internally. However, it may propagate exceptions from the underlying
+            run_pipeline_with_config function if they are not handled there.
+            """
             nonlocal encountered_errors
+            # iterates through the configured workflows, executing each in order.
             async for output in run_pipeline_with_config(
                 pipeline_config,
                 run_id=run_id,
                 memory_profile=memprofile,
                 cache=cache,
+                # Throughout the execution, progress is reported using the configured reporter.
                 progress_reporter=progress_reporter,
+                # JSON, CSV, or Parquet
                 emit=(
                     [TableEmitterType(e) for e in pipeline_emit]
                     if pipeline_emit
@@ -133,6 +267,7 @@ def index_cli(
                 ),
                 is_resume_run=bool(resume),
             ):
+                # Errors are caught, logged, and modify the encountered_errors flag.
                 if output.errors and len(output.errors) > 0:
                     encountered_errors = True
                     progress_reporter.error(output.workflow)
@@ -141,6 +276,7 @@ def index_cli(
 
                 progress_reporter.info(str(output.result))
 
+        # The appropriate event loop is configured (uvloop for non-Windows, asyncio for Windows).
         if platform.system() == "Windows":
             import nest_asyncio  # type: ignore Ignoring because out of windows this will cause an error
 
@@ -153,13 +289,19 @@ def index_cli(
             with asyncio.Runner(loop_factory=uvloop.new_event_loop) as runner:  # type: ignore Ignoring because minor versions this will throw an error
                 runner.run(execute())
         else:
+            # platform is not windows and python version is less than 3.11
+            # this block might seem unreachable because of the python version setup in VSCode
             import uvloop  # type: ignore Ignoring because on windows this will cause an error
 
             uvloop.install()
             asyncio.run(execute())
 
+    # set up and execute the pipeline asynchronously
     _run_workflow_async()
+
     progress_reporter.stop()
+
+    # Final status messages are reported (success or errors encountered).
     if encountered_errors:
         progress_reporter.error(
             "Errors occurred during the pipeline run, see logs for more details."
@@ -167,6 +309,7 @@ def index_cli(
     else:
         progress_reporter.success("All workflows completed successfully.")
 
+    # If running from CLI (cli=True), sys.exit is called with an appropriate exit code.
     if cli:
         sys.exit(1 if encountered_errors else 0)
 
@@ -223,7 +366,21 @@ def _create_default_config(
     dryrun: bool,
     reporter: ProgressReporter,
 ) -> PipelineConfig:
-    """Overlay default values on an existing config or create a default config if none is provided."""
+    """
+    Overlay default values on an existing config or create a default config if none is provided.
+
+    Calls:
+    ------
+    - _read_config_parameters: Read and parse configuration parameters from YAML, JSON, or environment variables.
+    - create_pipeline_config: Create a PipelineConfig object from the configuration parameters.
+        - the workflows are defined and added to the configuration here
+
+    Notes:
+    ------
+    - If a config file is specified but doesn't exist, it raises an error.
+    - The function logs the configuration details if verbose mode is enabled.
+    - In case of a dry run, it logs the configuration and exits without further execution.
+    """
     if config and not Path(config).exists():
         msg = f"Configuration file {config} does not exist"
         raise ValueError
@@ -240,25 +397,43 @@ def _create_default_config(
 
     if verbose or dryrun:
         reporter.info(f"Using default configuration: {redact(parameters.model_dump())}")
+
+    # we get back a fully populated PipelineConfig object ready for use in the pipeline.
     result = create_pipeline_config(parameters, verbose)
+
     if verbose or dryrun:
         reporter.info(f"Final Config: {redact(result.model_dump())}")
 
     if dryrun:
         reporter.info("dry run complete, exiting...")
         sys.exit(0)
+
     return result
 
 
 def _read_config_parameters(root: str, config: str | None, reporter: ProgressReporter):
+    """
+    Read and parse configuration parameters from YAML, JSON, or environment variables.
+
+    This function attempts to load configuration settings in the following order:
+    1. From a specified YAML file (settings.yaml or settings.yml)
+    2. From a specified JSON file (settings.json)
+    3. From environment variables if no file is found
+    """
+    # create a Path object from the root parameter
     _root = Path(root)
+
+    # if config is provided and if it is a yaml or yml file
     settings_yaml = (
         Path(config)
         if config and Path(config).suffix in [".yaml", ".yml"]
         else _root / "settings.yaml"
     )
+
+    # if settings.yaml does not exist, seti it to settings.yml
     if not settings_yaml.exists():
         settings_yaml = _root / "settings.yml"
+
     settings_json = (
         Path(config)
         if config and Path(config).suffix == ".json"
