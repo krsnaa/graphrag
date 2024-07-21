@@ -101,7 +101,7 @@ if __name__ == "__main__":
 
     index_cli(
         root=args.root,
-        verbose=args.verbose or False,
+        verbose=args.verbose or True,  # make it True by default
         resume=args.resume,
         memprofile=args.memprofile or False,
         nocache=args.nocache or False,

@@ -141,23 +141,23 @@ def index_cli(
             *(_covariate_workflows(settings) if covariates_enabled else []),
         ]. The workflow names are defined in workflows/default_workflows.py, each of which returns a list of steps.
         These steps are individual operations (often called "verbs" in data processing pipelines) that are executed in order.
-        Based on the typical dependencies, here's an approximation of what the sorted order might look like:
-            - create_base_documents
+        Here is the sequence of steps after topological sorting:
             - create_base_text_units
             - create_base_extracted_entities
+            - create_final_covariates (if enabled)
             - create_summarized_entities
+            - join_text_units_to_covariate_ids (if enabled)
             - create_base_entity_graph
             - create_final_entities
-            - create_final_relationships
             - create_final_nodes
-            - join_text_units_to_entity_ids
-            - join_text_units_to_relationship_ids
             - create_final_communities
-            - create_final_covariates (if enabled)
-            - join_text_units_to_covariate_ids (if enabled)
-            - create_final_text_units
-            - create_final_documents
+            - join_text_units_to_entity_ids
+            - create_final_relationships
+            - join_text_units_to_relationship_ids
             - create_final_community_reports
+            - create_final_text_units
+            - create_base_documents
+            - create_final_documents
     - Async Workflow Execution:
         The _run_workflow_async() function is setup and called to execute the pipeline asynchronously.
         Signal handlers are set up for graceful termination.
