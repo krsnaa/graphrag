@@ -14,8 +14,8 @@ inside the graphrag/index/ directory. (this file...)
 So, the execution flow is:
 - poetry run poe index <...args>
 - Poetry executes python -m graphrag.index <...args>
-- This runs the __main__.py in the graphrag/index/ directory
-- The __main__.py file parses arguments and calls index_cli from cli.py
+- Python looks for and executes the __main__.py in the graphrag/index/ directory
+- The __main__.py file parses arguments and calls index_cli() from cli.py
 - The index_cli function in cli.py handles the indexing process based on the provided arguments
 """
 

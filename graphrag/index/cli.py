@@ -121,17 +121,63 @@ def index_cli(
     --------
     None
 
-    Raises:
-    -------
-    ValueError
-        If invalid configuration options are provided.
-
     Notes:
     ------
-    - This function sets up logging, creates a progress reporter, and handles project
-      initialization if needed.
-    - It loads and processes the configuration, then executes the indexing pipeline.
-    - The function can handle both new runs and resuming previous runs.
+    - Configuration and Setup (in index_cli):
+        A run ID is generated or retrieved (if resuming).
+        The function can handle both new runs and resuming previous runs.
+        Logging is set up based on the run ID and verbosity settings.
+        A progress reporter is created based on the specified type.
+        If --init was specified, project initialization occurs and the program exits. (_initialize_project_at)
+    - Pipeline Configuration:
+        The pipeline configuration is loaded or created using create_pipeline_config() - (inside create_pipeline_config.py).
+        This involves reading from config files or environment variables and setting up various components (input, storage, cache, etc.).
+        Also, the workflows are defined and added to the configuration
+        workflows=[
+            *_document_workflows(settings, embedded_fields),
+            *_text_unit_workflows(settings, covariates_enabled, embedded_fields),
+            *_graph_workflows(settings, embedded_fields),
+            *_community_workflows(settings, covariates_enabled, embedded_fields),
+            *(_covariate_workflows(settings) if covariates_enabled else []),
+        ]. The workflow names are defined in workflows/default_workflows.py, each of which returns a list of steps.
+        These steps are individual operations (often called "verbs" in data processing pipelines) that are executed in order.
+        Based on the typical dependencies, here's an approximation of what the sorted order might look like:
+            - create_base_documents
+            - create_base_text_units
+            - create_base_extracted_entities
+            - create_summarized_entities
+            - create_base_entity_graph
+            - create_final_entities
+            - create_final_relationships
+            - create_final_nodes
+            - join_text_units_to_entity_ids
+            - join_text_units_to_relationship_ids
+            - create_final_communities
+            - create_final_covariates (if enabled)
+            - join_text_units_to_covariate_ids (if enabled)
+            - create_final_text_units
+            - create_final_documents
+            - create_final_community_reports
+    - Async Workflow Execution:
+        The _run_workflow_async() function is setup and called to execute the pipeline asynchronously.
+        Signal handlers are set up for graceful termination.
+        The appropriate event loop is configured (uvloop for non-Windows, asyncio for Windows).
+    - Pipeline Execution:
+        graphrag/index/run.py::run_pipeline_with_config() is called within the async context in execute().
+        That in turn, calls run_pipeline(), which in turn, calls load_workflows() in load.py, which
+            determines the execution order of the workflows using topological_sort to account for dependencies.
+        This function iterates through the indexing pipeline workflows, executing each in order.
+    - Progress Reporting and Error Handling:
+        Throughout the execution, progress is reported using the configured reporter.
+        Errors are caught, logged, and may modify the encountered_errors flag.
+    - Workflow Completion:
+        As each workflow completes, its results are yielded back to the main execution loop.
+    - Cleanup and Finalization:
+        After all workflows are complete, or if interrupted, cleanup processes run.
+        Final status messages are reported (success or errors encountered).
+    - Program Termination:
+        If running from CLI (cli=True), sys.exit is called with an appropriate exit code.
+        Otherwise, the function returns, allowing for potential further processing if called programmatically.
     - Various options allow for customization of the indexing process, including
       output formats, caching, and reporting.
     """
@@ -225,7 +271,7 @@ def index_cli(
 
             Workflow Execution:
             - Iterates through workflows defined in the pipeline configuration.
-            - Runs each workflow using run_pipeline_with_config.
+            - Runs each workflow using run_pipeline_with_config().
             - Captures and processes the output of each workflow.
 
             Error Handling:
