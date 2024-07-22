@@ -3,6 +3,7 @@
 
 """Parameterization settings for the default configuration, loaded from environment variables."""
 
+import logging
 import os
 from enum import Enum
 from pathlib import Path
@@ -56,6 +57,8 @@ from .models import (
 )
 from .read_dotenv import read_dotenv
 
+log = logging.getLogger(__name__)
+
 InputModelValidator = TypeAdapter(GraphRagConfigInput)
 
 
@@ -70,6 +73,9 @@ def create_graphrag_config(
     InputModelValidator.validate_python(values, strict=True)
 
     reader = EnvironmentReader(env)
+    log.info(
+        "EnvironmentReader",
+    )
 
     def hydrate_async_type(input: LLMConfigInput, base: AsyncType) -> AsyncType:
         value = input.get(Fragment.async_mode)
