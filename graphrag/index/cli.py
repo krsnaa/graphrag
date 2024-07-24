@@ -141,23 +141,41 @@ def index_cli(
             *(_covariate_workflows(settings) if covariates_enabled else []),
         ]. The workflow names are defined in workflows/default_workflows.py, each of which returns a list of steps.
         These steps are individual operations (often called "verbs" in data processing pipelines) that are executed in order.
-        Here is the sequence of steps after topological sorting:
+        Here is the sequence of workflow steps after topological sorting:
             1- create_base_text_units
             2- create_base_extracted_entities
-            3- create_final_covariates (if enabled)
-            4- create_summarized_entities
+            3- create_summarized_entities
+            4- create_final_covariates (if enabled)
             5- join_text_units_to_covariate_ids (if enabled)
             6- create_base_entity_graph
             7- create_final_entities
             8- create_final_nodes
             9- create_final_communities
-            10- join_text_units_to_entity_ids
-            11- create_final_relationships
+            10- create_final_relationships
+            11- join_text_units_to_entity_ids
             12- join_text_units_to_relationship_ids
             13- create_final_community_reports
             14- create_final_text_units
             15- create_base_documents
             16- create_final_documents
+
+        This is the dependency graph of the workflows. The topological sort ensures that the workflows are executed in the correct order.
+            create_base_text_units --> create_base_extracted_entities
+            create_base_text_units --> create_final_covariates
+            create_base_extracted_entities --> create_summarized_entities
+            create_final_covariates --> join_text_units_to_covariate_ids
+            create_summarized_entities --> create_base_entity_graph
+            create_base_entity_graph --> create_final_entities
+            create_base_entity_graph --> create_final_nodes
+            create_base_entity_graph --> create_final_communities
+            create_final_entities --> join_text_units_to_entity_ids
+            create_final_nodes & create_base_entity_graph --> create_final_relationships
+            create_final_relationships --> join_text_units_to_relationship_ids
+            create_final_nodes & create_final_relationships & create_final_covariates --> create_final_community_reports
+            create_base_text_units & join_text_units_to_covariate_ids & join_text_units_to_relationship_ids & join_text_units_to_entity_ids --> create_final_text_units
+            create_final_text_units --> create_base_documents
+            create_base_documents --> create_final_documents
+
     - Async Workflow Execution:
         The _run_workflow_async() function is setup and called to execute the pipeline asynchronously.
         Signal handlers are set up for graceful termination.

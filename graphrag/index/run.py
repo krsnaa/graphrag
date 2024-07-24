@@ -344,7 +344,10 @@ async def run_pipeline(
             workflow_name: str = workflow.name
             last_workflow = workflow_name
 
-            log.info("Running workflow: %s...", workflow_name)
+            log.info(
+                "/n/n********************************/n/nRunning workflow: %s...",
+                workflow_name,
+            )
 
             if is_resume_run and await storage.has(
                 f"{workflow_to_run.workflow.name}.parquet"
