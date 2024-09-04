@@ -52,6 +52,21 @@ def run_global_search(
     if streaming:
 
         async def run_streaming_search():
+            """
+            Executes a streaming search API call and combines its results into a
+            single response string, while also extracting additional context data
+            from the first chunk received. It returns both the combined response
+            and the extracted context data.
+
+            Returns:
+                Tuple[str,Any]: A tuple containing two values:
+                
+                - The first element is a string (`full_response`) representing the
+                complete search response.
+                - The second element is a value of unknown data type represented
+                by (`context_data`) that contains context information.
+
+            """
             full_response = ""
             context_data = None
             get_context_data = True
@@ -134,6 +149,18 @@ def run_local_search(
     if streaming:
 
         async def run_streaming_search():
+            """
+            Initiates a streaming search request and aggregates the response. It
+            separates the initial context data from subsequent stream chunks,
+            returning both as output. The function prints stream chunks as they
+            arrive for real-time monitoring.
+
+            Returns:
+                Tuple[str,Any]: A tuple containing two elements. The first element
+                is a string (`full_response`) and the second element can be any
+                data type (`context_data`).
+
+            """
             full_response = ""
             context_data = None
             get_context_data = True
