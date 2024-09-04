@@ -241,12 +241,12 @@ a {
                     <ul>
                         <li>
                             
-<a href="/graphrag/posts/prompt_tuning/auto_prompt_tuning/">Automatic Templating</a>
+<a href="/graphrag/posts/prompt_tuning/auto_prompt_tuning/">Auto Tuning</a>
 
                         </li>
                         <li>
                             
-<a href="/graphrag/posts/prompt_tuning/manual_prompt_tuning/">Manual Prompt Tuning</a>
+<a href="/graphrag/posts/prompt_tuning/manual_prompt_tuning/">Manual Tuning</a>
 
                         </li>
                     </ul>
@@ -467,14 +467,14 @@ a {
 <td>25</td>
 </tr>
 <tr>
-<td><code>GRAPHRAG_LLM_TPM</code></td>
+<td><code>GRAPHRAG_LLM_TOKENS_PER_MINUTE</code></td>
 <td></td>
 <td>The number of tokens per minute to allow for the LLM client. 0 = Bypass</td>
 <td><code>int</code></td>
 <td>0</td>
 </tr>
 <tr>
-<td><code>GRAPHRAG_LLM_RPM</code></td>
+<td><code>GRAPHRAG_LLM_REQUESTS_PER_MINUTE</code></td>
 <td></td>
 <td>The number of requests per minute to allow for the LLM client. 0 = Bypass</td>
 <td><code>int</code></td>
@@ -500,6 +500,27 @@ a {
 <td>Whether to sleep on rate limit recommendation. (Azure Only)</td>
 <td><code>bool</code></td>
 <td><code>True</code></td>
+</tr>
+<tr>
+<td><code>GRAPHRAG_LLM_TEMPERATURE</code></td>
+<td></td>
+<td>The temperature to use generation.</td>
+<td><code>float</code></td>
+<td>0</td>
+</tr>
+<tr>
+<td><code>GRAPHRAG_LLM_TOP_P</code></td>
+<td></td>
+<td>The top_p to use for sampling.</td>
+<td><code>float</code></td>
+<td>1</td>
+</tr>
+<tr>
+<td><code>GRAPHRAG_LLM_N</code></td>
+<td></td>
+<td>The number of responses to generate.</td>
+<td><code>int</code></td>
+<td>1</td>
 </tr>
 </tbody>
 </table>
@@ -622,14 +643,14 @@ a {
 <td>25</td>
 </tr>
 <tr>
-<td><code>GRAPHRAG_EMBEDDING_TPM</code></td>
+<td><code>GRAPHRAG_EMBEDDING_TOKENS_PER_MINUTE</code></td>
 <td></td>
 <td>The number of tokens per minute to allow for the embedding client. 0 = Bypass</td>
 <td><code>int</code></td>
 <td>0</td>
 </tr>
 <tr>
-<td><code>GRAPHRAG_EMBEDDING_RPM</code></td>
+<td><code>GRAPHRAG_EMBEDDING_REQUESTS_PER_MINUTE</code></td>
 <td></td>
 <td>The number of requests per minute to allow for the embedding client. 0 = Bypass</td>
 <td><code>int</code></td>
@@ -648,13 +669,6 @@ a {
 <td>The maximum number of seconds to wait between retries.</td>
 <td><code>int</code></td>
 <td>10</td>
-</tr>
-<tr>
-<td><code>GRAPHRAG_EMBEDDING_TARGET</code></td>
-<td></td>
-<td>The target fields to embed. Either <code>required</code> or <code>all</code>.</td>
-<td><code>str</code></td>
-<td><code>required</code></td>
 </tr>
 <tr>
 <td><code>GRAPHRAG_EMBEDDING_SLEEP_ON_RATE_LIMIT_RECOMMENDATION</code></td>
@@ -831,7 +845,7 @@ a {
 <td>The chunk size in tokens for text-chunk analysis windows.</td>
 <td><code>str</code></td>
 <td>optional</td>
-<td>300</td>
+<td>1200</td>
 </tr>
 <tr>
 <td><code>GRAPHRAG_CHUNK_OVERLAP</code></td>
@@ -846,6 +860,13 @@ a {
 <td><code>str</code></td>
 <td>optional</td>
 <td><code>id</code></td>
+</tr>
+<tr>
+<td><code>GRAPHRAG_CHUNK_ENCODING_MODEL</code></td>
+<td>The encoding model to use for chunking.</td>
+<td><code>str</code></td>
+<td>optional</td>
+<td>The top-level encoding model.</td>
 </tr>
 </tbody>
 </table>
@@ -873,7 +894,7 @@ a {
 <td>The maximum number of redrives (gleanings) to invoke when extracting entities in a loop.</td>
 <td><code>int</code></td>
 <td>optional</td>
-<td>0</td>
+<td>1</td>
 </tr>
 <tr>
 <td><code>GRAPHRAG_ENTITY_EXTRACTION_ENTITY_TYPES</code></td>
@@ -881,6 +902,13 @@ a {
 <td><code>str</code></td>
 <td>optional</td>
 <td><code>organization,person,event,geo</code></td>
+</tr>
+<tr>
+<td><code>GRAPHRAG_ENTITY_EXTRACTION_ENCODING_MODEL</code></td>
+<td>The encoding model to use for entity extraction.</td>
+<td><code>str</code></td>
+<td>optional</td>
+<td>The top-level encoding model.</td>
 </tr>
 <tr>
 <td><code>GRAPHRAG_SUMMARIZE_DESCRIPTIONS_PROMPT_FILE</code></td>
@@ -922,18 +950,25 @@ a {
 <td>The maximum number of redrives (gleanings) to invoke when extracting claims in a loop.</td>
 <td><code>int</code></td>
 <td>optional</td>
-<td>0</td>
+<td>1</td>
 </tr>
 <tr>
-<td><code>GRAPHRAG_COMMUNITY_REPORT_PROMPT_FILE</code></td>
-<td>The community report extraction prompt to utilize.</td>
+<td><code>GRAPHRAG_CLAIM_EXTRACTION_ENCODING_MODEL</code></td>
+<td>The encoding model to use for claim extraction.</td>
+<td><code>str</code></td>
+<td>optional</td>
+<td>The top-level encoding model</td>
+</tr>
+<tr>
+<td><code>GRAPHRAG_COMMUNITY_REPORTS_PROMPT_FILE</code></td>
+<td>The community reports extraction prompt to utilize.</td>
 <td><code>string</code></td>
 <td>optional</td>
 <td><code>None</code></td>
 </tr>
 <tr>
-<td><code>GRAPHRAG_COMMUNITY_REPORT_MAX_LENGTH</code></td>
-<td>The maximum number of tokens to generate per community report.</td>
+<td><code>GRAPHRAG_COMMUNITY_REPORTS_MAX_LENGTH</code></td>
+<td>The maximum number of tokens to generate per community reports.</td>
 <td><code>int</code></td>
 <td>optional</td>
 <td>1500</td>

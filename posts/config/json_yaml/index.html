@@ -241,12 +241,12 @@ a {
                     <ul>
                         <li>
                             
-<a href="/graphrag/posts/prompt_tuning/auto_prompt_tuning/">Automatic Templating</a>
+<a href="/graphrag/posts/prompt_tuning/auto_prompt_tuning/">Auto Tuning</a>
 
                         </li>
                         <li>
                             
-<a href="/graphrag/posts/prompt_tuning/manual_prompt_tuning/">Manual Prompt Tuning</a>
+<a href="/graphrag/posts/prompt_tuning/manual_prompt_tuning/">Manual Tuning</a>
 
                         </li>
                     </ul>
@@ -342,6 +342,9 @@ API_KEY=some_api_key
 <li><code>max_retry_wait</code> <strong>float</strong> - The maximum backoff time.</li>
 <li><code>sleep_on_rate_limit_recommendation</code> <strong>bool</strong> - Whether to adhere to sleep recommendations (Azure).</li>
 <li><code>concurrent_requests</code> <strong>int</strong> The number of open requests to allow at once.</li>
+<li><code>temperature</code> <strong>float</strong> - The temperature to use.</li>
+<li><code>top_p</code> <strong>float</strong> - The top-p value to use.</li>
+<li><code>n</code> <strong>int</strong> - The number of completions to generate.</li>
 </ul>
 <h2>parallelization</h2>
 <h3>Fields</h3>
@@ -369,6 +372,7 @@ API_KEY=some_api_key
 <li><code>size</code> <strong>int</strong> - The max chunk size in tokens.</li>
 <li><code>overlap</code> <strong>int</strong> - The chunk overlap in tokens.</li>
 <li><code>group_by_columns</code> <strong>list[str]</strong> - group documents by fields before chunking.</li>
+<li><code>encoding_model</code> <strong>str</strong> - The text encoding model to use. Default is to use the top-level encoding model.</li>
 <li><code>strategy</code> <strong>dict</strong> - Fully override the chunking strategy.</li>
 </ul>
 <h2>cache</h2>
@@ -407,6 +411,7 @@ API_KEY=some_api_key
 <li><code>prompt</code> <strong>str</strong> - The prompt file to use.</li>
 <li><code>entity_types</code> <strong>list[str]</strong> - The entity types to identify.</li>
 <li><code>max_gleanings</code> <strong>int</strong> - The maximum number of gleaning cycles to use.</li>
+<li><code>encoding_model</code> <strong>str</strong> - The text encoding model to use. By default, this will use the top-level encoding model.</li>
 <li><code>strategy</code> <strong>dict</strong> - Fully override the entity extraction strategy.</li>
 </ul>
 <h2>summarize_descriptions</h2>
@@ -429,6 +434,7 @@ API_KEY=some_api_key
 <li><code>prompt</code> <strong>str</strong> - The prompt file to use.</li>
 <li><code>description</code> <strong>str</strong> - Describes the types of claims we want to extract.</li>
 <li><code>max_gleanings</code> <strong>int</strong> - The maximum number of gleaning cycles to use.</li>
+<li><code>encoding_model</code> <strong>str</strong> - The text encoding model to use. By default, this will use the top-level encoding model.</li>
 <li><code>strategy</code> <strong>dict</strong> - Fully override the claim extraction strategy.</li>
 </ul>
 <h2>community_reports</h2>
